@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Alfa-boss · Управление продажами сети</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand-row">
+      <div class="brand">
+        <div class="logo">АБ</div>
+        <div>
+          <h1>Alfa-boss · Sales Intelligence</h1>
+          <div class="sub" id="role-sub">Прототип · руководитель клиентских менеджеров</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="mode-switch" role="group" aria-label="Режим">
+          <button type="button" class="mode-btn active" data-mode="network">Сеть (КМ)</button>
+          <button type="button" class="mode-btn" data-mode="product">Продуктовый desk</button>
+          <button type="button" class="mode-btn" data-mode="division">Дивизион</button>
+          <button type="button" class="mode-btn" data-mode="region">Регион</button>
+        </div>
+        <div class="pill tip" data-tip="Еженедельная оперативка. УКП действует 14 дней; пока активно — клиент занят для новой отправки.">Оперативка · TTL 14 дн.</div>
+      </div>
+    </div>
+
+    <div class="filters">
+      <div class="field ms-field">
+        <label class="tip" data-tip="Множественный выбор. Пустой список = все дивизионы (total по сети в рамках остальных фильтров).">Дивизион</label>
+        <div class="ms" id="ms-division" data-key="divisions"></div>
+      </div>
+      <div class="field ms-field">
+        <label class="tip" data-tip="Множественный выбор регионов/управлений внутри выбранных дивизионов. Пусто = все.">Регион / управление</label>
+        <div class="ms" id="ms-region" data-key="regions"></div>
+      </div>
+      <div class="field ms-field" style="min-width:220px">
+        <label class="tip" data-tip="Множественный выбор команд/отделов. Пусто = все в выбранных регионах.">Команда / отдел</label>
+        <div class="ms" id="ms-team" data-key="teams"></div>
+      </div>
+      <div class="field ms-field" style="min-width:200px">
+        <label class="tip" data-tip="Множественный выбор продуктов УКП. Пусто = все 19 продуктов. В режиме продуктового desk рекомендуется выбрать 1–3 продукта.">Продукт</label>
+        <div class="ms" id="ms-product" data-key="products"></div>
+      </div>
+      <div class="filter-actions">
+        <button type="button" class="ghost" id="btn-all-div">Все дивизионы (total)</button>
+        <button type="button" class="ghost" id="btn-reset">Демо-срез</button>
+      </div>
+    </div>
+
+    <div class="ctx">
+      <div id="ctx-line">—</div>
+      <div id="ctx-meta">—</div>
+      <div id="net-stats"></div>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs-network">
+    <button class="tab active" data-tab="overview" type="button">Обзор</button>
+    <button class="tab" data-tab="ukp" type="button">Направленные УКП</button>
+    <button class="tab" data-tab="kms" type="button">Отработка базы КМ</button>
+    <button class="tab" data-tab="products" type="button">По продуктам</button>
+    <button class="tab" data-tab="forecast" type="button">Прогноз</button>
+  </nav>
+  <nav class="tabs hidden" id="tabs-product">
+    <button class="tab active" data-tab="pdesk" type="button">Продуктовый обзор</button>
+    <button class="tab" data-tab="pdiv" type="button">По дивизионам</button>
+    <button class="tab" data-tab="pqual" type="button">Качество сети</button>
+    <button class="tab" data-tab="forecast" type="button">Прогноз</button>
+  </nav>
+  <nav class="tabs hidden" id="tabs-division">
+    <button class="tab active" data-tab="divov" type="button" id="tab-divov-label">Обзор дивизиона</button>
+    <button class="tab hidden" data-tab="mgr" type="button" id="tab-mgr">Менеджеры</button>
+    <div class="tabs-tools">
+      <div class="field field-inline">
+        <label for="div-period-from">Накопительно с</label>
+        <select id="div-period-from">
+          <option value="0">тек. неделя</option>
+          <option value="1">−1 нед.</option>
+          <option value="2">−2 нед.</option>
+          <option value="3">−3 нед.</option>
+          <option value="4">−4 нед.</option>
+          <option value="5">−5 нед.</option>
+        </select>
+      </div>
+      <div class="field field-inline">
+        <label for="div-product-filter">Продукт в коммуникациях</label>
+        <select id="div-product-filter">
+          <option value="">Все продукты</option>
+        </select>
+      </div>
+    </div>
+  </nav>
+
+  <main>
+    <section class="panel active" id="panel-overview">
+      <div class="kpi-row" id="kpi-row"></div>
+      <div class="grid-2">
+        <div class="stack-left">
+          <div class="card">
+            <h3 class="tip" data-tip="Недельный прирост отправок УКП за последние 6 недель (mock-тренд).">Динамика Δ УКП</h3>
+            <div class="trend" id="trend"></div>
+          </div>
+          <div class="card">
+            <h3 class="tip" data-tip="Воронка с уровнями: L1 — все клиенты и проспекты; L2 — ЮЛ с ЛПР с меткой Alfa-boss (без метки УКП недоступно). Далее — контакт, УКП, заявки, сделки. На заявках возможен приток без УКП (P2/P3).">Воронка: потенциал → Alfa-boss → сделки</h3>
+            <div id="funnel"></div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <h3 class="tip" data-tip="Структура заявок по путям: P1 — после УКП; P2 — завёл КМ без УКП; P3 — органический трафик Alfa-boss (ЛПР сам оформил). При высоком проникновении AB растёт доля P3.">Структура заявок по путям</h3>
+              <div class="field field-inline">
+                <label class="tip" data-tip="Срез клиентов: с активными на неделе ЛПР в Alfa-boss, без активных ЛПР на неделе или вся база. Органика AB возможна только у активных на неделе.">Клиенты</label>
+                <select id="apps-path-filter">
+                  <option value="all">Все</option>
+                  <option value="act">Акт. на нед.</option>
+                  <option value="noact">Без акт. на нед.</option>
+                </select>
+              </div>
+            </div>
+            <div class="apps-path-legend" id="apps-path-legend"></div>
+            <div class="apps-path-chart" id="apps-path-chart"></div>
+            <p class="note-line" id="apps-path-note"></p>
+          </div>
+        </div>
+        <div class="card">
+          <h3 class="tip" data-tip="Рейтинг КМ по ключевым показателям отработки. В каждом блоке — топ-3 и боттом-3 в текущем срезе.">Рейтинг КМ</h3>
+          <div id="bench-note"></div>
+          <div class="rank-metric">
+            <h4 class="tip" data-tip="Доля клиентской базы КМ, которая сейчас под действующим УКП: активные УКП / клиентская база.">Покрытие УКП клиентской базы</h4>
+            <div class="rank-lists">
+              <div>
+                <h5>Топ</h5>
+                <ul id="rank-cov-top"></ul>
+              </div>
+              <div>
+                <h5>Боттом</h5>
+                <ul id="rank-cov-bot"></ul>
+              </div>
+            </div>
+          </div>
+          <div class="rank-metric">
+            <h4 class="tip" data-tip="Конверсия отправленных УКП → акцепт. Учитываются КМ с достаточным объёмом отправок.">Конверсия УКП → акцепт</h4>
+            <div class="rank-lists">
+              <div>
+                <h5>Топ</h5>
+                <ul id="rank-acc-top"></ul>
+              </div>
+              <div>
+                <h5>Боттом</h5>
+                <ul id="rank-acc-bot"></ul>
+              </div>
+            </div>
+          </div>
+          <div class="rank-metric">
+            <h4 class="tip" data-tip="Доля проникновения Alfa-boss: клиенты с активными ЛПР в режиме Alfa-boss за неделю / клиентская база.">Проникновение Alfa-boss</h4>
+            <div class="rank-lists">
+              <div>
+                <h5>Топ</h5>
+                <ul id="rank-ab-top"></ul>
+              </div>
+              <div>
+                <h5>Боттом</h5>
+                <ul id="rank-ab-bot"></ul>
+              </div>
+            </div>
+          </div>
+          <div class="rank-metric">
+            <h4 class="tip" data-tip="Среднее число продуктов в действующих УКП на одного клиента под активным УКП.">Продукты в УКП на клиента</h4>
+            <div class="rank-lists">
+              <div>
+                <h5>Топ</h5>
+                <ul id="rank-prod-top"></ul>
+              </div>
+              <div>
+                <h5>Боттом</h5>
+                <ul id="rank-prod-bot"></ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-ukp">
+      <div class="toolbar">
+        <div class="field">
+          <label class="tip" data-tip="Фильтр строк реестра по текущему статусу УКП.">Статус УКП</label>
+          <select id="ukp-status">
+            <option value="ALL">Все статусы</option>
+            <option value="sent">Отправлено</option>
+            <option value="viewed">Просмотрено</option>
+            <option value="discuss">В обсуждении</option>
+            <option value="accepted">Акцептовано</option>
+            <option value="rejected">Отклонено</option>
+            <option value="expired">Деактивировано</option>
+            <option value="done">Завершено</option>
+          </select>
+        </div>
+        <div class="field" style="min-width:220px">
+          <label>Поиск</label>
+          <input id="ukp-search" type="search" placeholder="КМ, клиент, ID УКП" />
+        </div>
+      </div>
+      <div id="ukp-kpis" class="kpi-row"></div>
+      <p class="note-line">Реестр направленных УКП. Наведите на заголовки KPI — там формулы.</p>
+      <div class="table-wrap">
+        <table id="ukp-table">
+          <thead>
+            <tr>
+              <th class="tip" data-tip="Идентификатор УКП и дата/время отправки КМ.">ID / отправка</th>
+              <th class="tip" data-tip="Клиентский менеджер, отправивший предложение.">КМ</th>
+              <th class="tip" data-tip="ЮЛ (клиент или проспект) и роль ЛПР.">Клиент / ЛПР</th>
+              <th class="tip" data-tip="Продукты, включённые в данное УКП (1 или несколько из 19).">Продукт(ы)</th>
+              <th class="tip" data-tip="Текущий статус жизненного цикла УКП.">Статус</th>
+              <th class="tip" data-tip="Дата первого просмотра ЛПР. Пусто — ещё не открывал.">Просмотр</th>
+              <th class="num tip" data-tip="Осталось дней до деактивации (TTL = 14 дней с отправки). Только для активных статусов.">TTL</th>
+              <th class="tip" data-tip="Есть ли связанная заявка / сделка по цепочке УКП.">Заявка / сделка</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-kms">
+      <p class="note-line" id="kms-note">Пофамильная отработка потенциала. Смотрите колонки конверсий: высокий объём при низкой конв. в акцепт = плохой сигнал.</p>
+      <div class="table-wrap" id="kms-table-wrap"></div>
+    </section>
+
+    <section class="panel" id="panel-products">
+      <p class="note-line">Разрез по продуктам УКП в текущем орг-срезе. Сумма потенциалов по продуктам может превышать уникальную базу ЮЛ.</p>
+      <div class="table-wrap">
+        <table id="prod-table">
+          <thead>
+            <tr>
+              <th class="tip" data-tip="Продукт из справочника УКП (19 позиций).">Продукт</th>
+              <th class="num tip" data-tip="ЮЛ со склонностью к продукту в срезе (сумма по КМ; не unique).">Клиентская база</th>
+              <th class="num tip" data-tip="ЮЛ с активным УКП по продукту.">Активные</th>
+              <th class="num tip" data-tip="Свободны для новой отправки по продукту.">Доступно</th>
+              <th class="num tip" data-tip="Новые отправки УКП с этим продуктом за неделю (недельный flow = значение колонки).">УКП направлено</th>
+              <th class="num tip" data-tip="Акцепты / отправленные УКП по продукту, %.">Конв. акц.</th>
+              <th class="num tip" data-tip="Заявки пути P1 / отправленные, %.">Конв. заявка</th>
+              <th class="num tip" data-tip="Сделки / отправленные, %.">Конв. сделка</th>
+              <th class="num tip" data-tip="Истекло без просмотра за неделю.">Истекло</th>
+              <th class="num tip" data-tip="Заявки / сделки по продукту.">Заявки · сделки</th>
+              <th class="num tip" data-tip="Прогноз сделок из активного пайплайна УКП по средней конверсии продукта.">Прогноз</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-forecast">
+      <div class="kpi-row" id="forecast-kpis"></div>
+      <div class="grid-2">
+        <div class="card">
+          <h3 class="tip" data-tip="Ожидаемые сделки = Σ (УКП в статусе × вероятность довести до сделки). Вероятности калибруются средней конверсией среза.">Прогноз из пайплайна УКП</h3>
+          <div id="forecast-pipeline"></div>
+        </div>
+        <div class="card">
+          <h3 class="tip" data-tip="Если отправить УКП всему пулу «доступно» при средней конверсии среза — сколько сделок ожидать.">Сценарий: закрыть доступную ёмкость</h3>
+          <div id="forecast-capacity"></div>
+        </div>
+      </div>
+      <p class="note-line" id="forecast-note"></p>
+    </section>
+
+    <section class="panel" id="panel-pdesk">
+      <div class="kpi-row" id="pdesk-kpis"></div>
+      <div class="grid-2">
+        <div class="stack-left">
+          <div class="card">
+            <h3 class="tip" data-tip="Недельный прирост отправок УКП по выбранному продукту(ам) за последние 6 недель (mock-тренд).">Динамика Δ УКП</h3>
+            <div class="trend" id="pdesk-trend"></div>
+          </div>
+          <div class="card">
+            <h3>Воронка продукта по сети</h3>
+            <div id="pdesk-funnel"></div>
+          </div>
+          <div class="card">
+            <div class="card-head">
+              <h3 class="tip" data-tip="Структура заявок по путям для выбранного продукта: P1 — после УКП; P2 — КМ без УКП; P3 — органика Alfa-boss.">Структура заявок по путям</h3>
+              <div class="field field-inline">
+                <label class="tip" data-tip="Срез клиентов: с активными на неделе ЛПР в Alfa-boss, без активных ЛПР на неделе или вся база. Органика AB возможна только у активных на неделе.">Клиенты</label>
+                <select id="pdesk-apps-path-filter">
+                  <option value="all">Все</option>
+                  <option value="act">Акт. на нед.</option>
+                  <option value="noact">Без акт. на нед.</option>
+                </select>
+              </div>
+            </div>
+            <div class="apps-path-legend" id="pdesk-apps-path-legend"></div>
+            <div class="apps-path-chart" id="pdesk-apps-path-chart"></div>
+            <p class="note-line" id="pdesk-apps-path-note"></p>
+          </div>
+        </div>
+        <div class="card">
+          <h3 class="tip" data-tip="Как дивизионы отрабатывают выбранный продукт(ы): охват и качество конверсий.">Сигналы для продуктового desk</h3>
+          <div id="pdesk-signals"></div>
+          <div id="pdesk-forecast" class="kpi-row" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-pdiv">
+      <p class="note-line">Сравнение дивизионов по выбранным продуктам: объём отработок и качество конверсий.</p>
+      <div class="table-wrap">
+        <table id="pdiv-table">
+          <thead>
+            <tr>
+              <th>Дивизион</th>
+              <th class="num tip" data-tip="Число КМ в дивизионе (с учётом фильтров).">КМ</th>
+              <th class="num tip" data-tip="Клиентская база по выбранным продуктам.">Клиентская база</th>
+              <th class="num tip" data-tip="Проникновение Alfa-boss = ЮЛ с меткой / потенциал. Чем выше, тем полезнее оцифровка продаж продукта.">Проникн. AB</th>
+              <th class="num tip" data-tip="Недельный flow отправок УКП (значение за неделю, не дублируется отдельным приростом).">УКП направлено</th>
+              <th class="num tip" data-tip="Конверсия УКП → акцепт.">Конв. акц.</th>
+              <th class="num tip" data-tip="Конверсия УКП → заявка (P1).">Конв. заявка</th>
+              <th class="num tip" data-tip="Конверсия УКП → сделка.">Конв. сделка</th>
+              <th class="num tip" data-tip="Сделки факт.">Сделки</th>
+              <th class="num tip" data-tip="Прогноз сделок из пайплайна.">Прогноз</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-pqual">
+      <p class="note-line">КМ сети с худшим качеством УКП по выбранному продукту — много отправок, мало акцептов. Фокус продуктового desk на обучение сети / донастройку оффера.</p>
+      <div class="table-wrap" id="pqual-wrap"></div>
+    </section>
+
+    <section class="panel" id="panel-divov">
+      <div class="div-block" data-block="cov">
+        <button type="button" class="help-btn" data-help="cov" aria-label="Методика: охват">?</button>
+        <div class="grid-cov">
+          <div class="card">
+            <h3>Охват клиентов коммуникациями</h3>
+            <div class="trend cov-trend" id="div-cov-trend"></div>
+          </div>
+          <div class="card div-kpi-card" id="div-cov-kpi"></div>
+          <div class="card div-kpi-card" id="div-cov-kpi-act"></div>
+          <div class="card div-kpi-card" id="div-cov-kpi-share"></div>
+        </div>
+      </div>
+
+      <div class="div-block" data-block="prod">
+        <button type="button" class="help-btn" data-help="prod" aria-label="Методика: продуктовое покрытие">?</button>
+        <div class="grid-2">
+          <div class="card">
+            <div class="card-head">
+              <h3>Продуктовое покрытие в коммуникациях</h3>
+              <button type="button" class="ghost" id="div-prod-more">Ещё</button>
+            </div>
+            <div class="comb" id="div-prod-comb"></div>
+          </div>
+          <div class="card div-kpi-card" id="div-prod-kpi"></div>
+        </div>
+      </div>
+
+      <div class="div-block" data-block="rank">
+        <button type="button" class="help-btn" data-help="rank" aria-label="Методика: рейтинг регионов">?</button>
+        <div class="card">
+          <div class="card-head div-rank-head">
+            <h3 id="div-rank-title">Рейтинг регионов / управлений</h3>
+            <div class="div-rank-controls">
+              <div class="seg" role="group" aria-label="Метрика рейтинга">
+                <button type="button" class="seg-btn active" data-div-metric="coverage">Доля охвата</button>
+                <button type="button" class="seg-btn" data-div-metric="perKm">Клиентов с комм. / КМ</button>
+              </div>
+            </div>
+          </div>
+          <p class="note-line" id="div-rank-note"></p>
+          <div class="table-wrap">
+            <table id="div-rank-table">
+              <thead>
+                <tr>
+                  <th class="num">#</th>
+                  <th id="div-rank-unit-th">Регион / управление</th>
+                  <th class="num" id="div-rank-metric-th">Доля охвата</th>
+                  <th class="num">Прирост за нед.</th>
+                  <th class="num tip" id="div-rank-move-th" data-tip="Изменение места в рейтинге внутри дивизиона к прошлому периоду.">Δ места</th>
+                  <th class="num tip" id="div-rank-q-th" data-tip="Квартиль по выбранной метрике среди сети: ★★★★ = 1/4 (выше 75%), ★ = 4/4 (ниже 25%).">Квартиль</th>
+                  <th>Топ-5 продуктов</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-mgr">
+      <div class="div-block" data-block="mgr">
+        <button type="button" class="help-btn" data-help="mgr" aria-label="Методика: рейтинг менеджеров">?</button>
+        <div class="card">
+          <div class="card-head">
+            <h3>Рейтинг клиентских менеджеров</h3>
+          </div>
+          <p class="note-line" id="mgr-note">Сводный рейтинг КМ региона. Сортировка по колонкам — клик по заголовку. Справа — сигналы для внимания руководителя.</p>
+          <div class="table-wrap" id="mgr-table-wrap"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="tip-bubble" class="tip-bubble" hidden></div>
+  <div id="help-modal" class="help-modal" hidden>
+    <div class="help-modal-backdrop" data-help-close></div>
+    <div class="help-modal-card" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
+      <button type="button" class="help-modal-close" data-help-close aria-label="Закрыть">×</button>
+      <h3 id="help-modal-title"></h3>
+      <div id="help-modal-body" class="help-modal-body"></div>
+    </div>
+  </div>
+  <div id="rank-modal" class="help-modal" hidden>
+    <div class="help-modal-backdrop" data-rank-close></div>
+    <div class="help-modal-card rank-modal-card" role="dialog" aria-modal="true" aria-labelledby="rank-modal-title">
+      <button type="button" class="help-modal-close" data-rank-close aria-label="Закрыть">×</button>
+      <h3 id="rank-modal-title"></h3>
+      <div id="rank-modal-body" class="help-modal-body"></div>
+    </div>
+  </div>
+
+  <footer class="proto-foot">
+    Mock-данные · детерминированы от ID КМ · мультифильтры · конверсии и прогноз · режимы «Сеть», «Продуктовый desk», «Дивизион»
+  </footer>
+
+  <script src="org-embed.js"></script>
+  <script src="products.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
