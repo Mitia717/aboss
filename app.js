@@ -7,13 +7,22 @@
   const WEEK_LABS = ["−5 нед.", "−4 нед.", "−3 нед.", "−2 нед.", "−1 нед.", "тек."];
 
   const TIPS = {
-    potential: "Уровень 1 воронки. Клиентская база: все ЮЛ на закреплении КМ — клиенты банка + проспекты. Источник: витрина закрепления. При фильтре продукта — ЮЛ со склонностью к продукту. Прирост справа — изменение базы за неделю, % к прошлой неделе.",
-    withAb: "Уровень 2 воронки. ЮЛ, у которых есть ЛПР с меткой Alfa-boss (БОСС) — доступ в режим. Без метки нельзя отправить УКП. Под цифрой — доля от клиентской базы. Справа — прирост числа ЮЛ с меткой за неделю, % к прошлой неделе (WoW).",
+    potential: "Уровень 1 воронки. Все клиенты и проспекты на закреплении КМ. Источник: витрина закрепления.",
+    allClients: "Уровень 2 воронки. Все клиенты банка на закреплении (без проспектов).",
+    withComm: "Уровень 3 воронки. Клиенты с коммуникациями: чаты, УКП, почта (tbd), звонки (tbd).",
+    consents: "Уровень 4 воронки. Согласия клиентов: акцепты УКП, хештеги Альфа Босс.",
+    appsComposite: "Уровень 5 воронки. Состав заявок: мастер-система после согласия, лендинги, лиды ТМ, заявки ДБО.",
+    dealsComposite: "Уровень 6 воронки. Состав сделок: цифровые и офлайн.",
+    withAb: "ЮЛ, у которых есть ЛПР с меткой Alfa-boss (БОСС) — доступ в режим. Без метки нельзя отправить УКП.",
     activatedAb: "Активированные ЛПР — из имеющих метку хотя бы раз входили в режим Alfa-boss. Справа — прирост WoW %.",
     penetration: "Проникновение Alfa-boss = ЮЛ с меткой / клиентская база. Чем выше, тем полезнее инструмент.",
     ukpCoverage: "Покрытие УКП = активные УКП / клиентская база. Доля базы КМ, которая сейчас под действующим предложением.",
     abPenWeek: "Проникновение Alfa-boss за неделю = клиенты с активными ЛПР в режиме Alfa-boss за неделю / клиентская база.",
-    productsPerClient: "Продукты в УКП на клиента = среднее число предложенных продуктов в действующих УКП на одного клиента под активным УКП.",
+    productsPerClient: "Продуктовое проникновение на клиента в коммуникациях = среднее число продуктов в коммуникациях на одного клиента с коммуникацией.",
+    commCoverage: "Охват коммуникациями = клиенты с коммуникацией / все клиенты банка.",
+    convCommDigital: "Конверсия коммуникаций в сделки в цифре = цифровые сделки / клиенты с коммуникацией.",
+    convAppsDeals: "Конверсия заявок в сделки = сделки / заявки.",
+    prodPerActivity: "Количество продуктов на клиента в активностях = среднее число продуктов в активностях на клиента с коммуникацией.",
     activeUkp: "Под активным УКП — ЮЛ с незавершённым УКП. Справа — WoW %.",
     available: "Доступно к УКП — ёмкость базы среди ЮЛ с меткой БОСС без активного УКП. Справа — WoW %.",
     deltaUkp: "УКП направлено — недельный flow отправок. Справа — WoW % к прошлой неделе.",
@@ -180,6 +189,22 @@
     const ukpCoverage = potential ? +(activeUkp / potential).toFixed(3) : 0;
     const abActiveWeek = Math.min(withAb, Math.round(activatedAb * (0.7 + rng.f() * 0.3)));
     const abPenWeek = potential ? +(abActiveWeek / potential).toFixed(3) : 0;
+    // Согласия ⊆ клиенты с коммуникациями: акцепты УКП + хештеги Alfa Boss (с пересечением)
+    const acceptAmongComm = Math.min(weekCoveredClients, accepted);
+    const consentHash = Math.min(weekCoveredClients, Math.round(abActiveWeek * (0.25 + rng.f() * 0.35)));
+    const consentOverlap = Math.min(acceptAmongComm, consentHash, Math.round(Math.min(acceptAmongComm, consentHash) * (0.35 + rng.f() * 0.3)));
+    const consents = Math.min(weekCoveredClients, acceptAmongComm + consentHash - consentOverlap);
+    // Состав заявок
+    let appsMaster = Math.round(apps * (0.32 + rng.f() * 0.14));
+    let appsLanding = Math.round(apps * (0.18 + rng.f() * 0.1));
+    let appsTm = Math.round(apps * (0.14 + rng.f() * 0.1));
+    let appsDbo = Math.max(0, apps - appsMaster - appsLanding - appsTm);
+    if (appsDbo < 0) { appsMaster = Math.max(0, appsMaster + appsDbo); appsDbo = 0; }
+    const dealsDigital = Math.min(deals, Math.max(0, Math.round(deals * (0.5 + rng.f() * 0.3))));
+    const dealsOffline = Math.max(0, deals - dealsDigital);
+    const commCoverage = clients ? +(weekCoveredClients / clients).toFixed(3) : 0;
+    const convCommDigital = weekCoveredClients ? +(dealsDigital / weekCoveredClients).toFixed(3) : 0;
+    const convAppsDeals = apps ? +(deals / apps).toFixed(3) : 0;
 
     let status = "norm";
     if (available <= 5 && deltaUkp <= 3) status = "locked";
@@ -263,6 +288,8 @@
       ukpCoverage, abActiveWeek, abPenWeek, productsPerClient,
       viewed, accepted, rejected, expiredWeek, deltaUkp, deltaApps, deltaDeals,
       apps, appsP1, appsP2, appsP3, deals, dealsFromUkp, sentTotal, capacityUsed, status, arch,
+      consents, appsMaster, appsLanding, appsTm, appsDbo,
+      dealsDigital, dealsOffline, commCoverage, convCommDigital, convAppsDeals,
       pipe: { sent: pipeSent, viewed: pipeViewed, discuss: pipeDiscuss, accepted: pipeAccepted },
       products
     });
@@ -339,6 +366,7 @@
     divProduct: "", // "" = all products; filters whole divisional overview
     divPeriodFrom: 0, // 0 = current week; 1..5 = cumulative from −N week
     divProdShowAll: false,
+    divProdView: "comm", // comm | apps
     mgrSort: "score",
     mgrSortDir: "desc"
   };
@@ -505,6 +533,18 @@
     const productsPerClient = activeUkp > 0
       ? +Math.min(2.2, Math.max(1, 1 + productSlotsActive / Math.max(1, activeUkp) * 0.5)).toFixed(2)
       : 0;
+    const scale = (k.apps || 1) ? apps / Math.max(1, k.apps || 1) : 1;
+    const appsMaster = Math.round((k.appsMaster || Math.round(apps * 0.35)) * scale);
+    const appsLanding = Math.round((k.appsLanding || Math.round(apps * 0.22)) * scale);
+    const appsTm = Math.round((k.appsTm || Math.round(apps * 0.18)) * scale);
+    const appsDbo = Math.max(0, apps - appsMaster - appsLanding - appsTm);
+    const dealsDigital = Math.min(deals, Math.round(deals * (k.deals ? (k.dealsDigital || deals * 0.6) / k.deals : 0.6)));
+    const dealsOffline = Math.max(0, deals - dealsDigital);
+    const consentScale = (k.clients || 1) ? clientsN / Math.max(1, k.clients || 1) : 1;
+    const consents = Math.min(weekCoveredClients, Math.round((k.consents != null ? k.consents : accepted) * consentScale));
+    const commCoverage = clientsN ? +(weekCoveredClients / clientsN).toFixed(3) : 0;
+    const convCommDigital = weekCoveredClients ? +(dealsDigital / weekCoveredClients).toFixed(3) : 0;
+    const convAppsDeals = apps ? +(deals / apps).toFixed(3) : 0;
     const m = enrichConversions({
       ...k, potential, withAb, activatedAb, clients: clientsN,
       penetration: potential ? +(withAb / potential).toFixed(3) : 0,
@@ -513,6 +553,8 @@
       sentTotal, accepted, appsP1, apps, appsP2, appsP3, deals, dealsFromUkp, viewed,
       chat, weekCoveredClients, clientsInChat, lprInChat, kmInChat,
       ukpCoverage, abActiveWeek, abPenWeek, productsPerClient,
+      consents, appsMaster, appsLanding, appsTm, appsDbo,
+      dealsDigital, dealsOffline, commCoverage, convCommDigital, convAppsDeals,
       capacityUsed, status, pipe,
       deltaApps: Math.min(apps, Math.round(apps * 0.4)),
       deltaDeals: Math.min(deals, Math.round(deals * 0.5))
@@ -609,6 +651,8 @@
       noAbGap: Math.max(0, potential - withAb),
       penetration: potential ? withAb / potential : 0,
       activationRate: withAb ? activatedAb / withAb : 0,
+      clients: sum(kms, "clients"),
+      prospects: sum(kms, "prospects"),
       chat: sum(kms, "chat"),
       kmInChat: sum(kms, "kmInChat"),
       kmInChatShare: kms.length ? sum(kms, "kmInChat") / kms.length : 0,
@@ -623,16 +667,44 @@
       available: sum(kms, "available"),
       viewed: sum(kms, "viewed"),
       accepted,
+      consents: (() => {
+        const chat = sum(kms, "chat");
+        return Math.min(chat, sum(kms, "consents"));
+      })(),
       apps: sum(kms, "apps"),
       appsP1, appsP2: sum(kms, "appsP2"), appsP3: sum(kms, "appsP3"),
+      appsMaster: sum(kms, "appsMaster"),
+      appsLanding: sum(kms, "appsLanding"),
+      appsTm: sum(kms, "appsTm"),
+      appsDbo: sum(kms, "appsDbo"),
       deals: sum(kms, "deals"),
       dealsFromUkp,
+      dealsDigital: sum(kms, "dealsDigital"),
+      dealsOffline: sum(kms, "dealsOffline"),
       expired: sum(kms, "expiredWeek"),
       deltaApps: sum(kms, "deltaApps"),
       deltaDeals: sum(kms, "deltaDeals"),
       convAccept: sentTotal ? accepted / sentTotal : 0,
       convApp: sentTotal ? appsP1 / sentTotal : 0,
       convDeal: sentTotal ? dealsFromUkp / sentTotal : 0,
+      convAppsDeals: (() => {
+        const a = sum(kms, "apps");
+        return a ? sum(kms, "deals") / a : 0;
+      })(),
+      convCommDigital: (() => {
+        const c = sum(kms, "chat");
+        return c ? sum(kms, "dealsDigital") / c : 0;
+      })(),
+      productsPerClient: (() => {
+        let w = 0, s = 0;
+        kms.forEach((k) => {
+          const c = k.chat || k.weekCoveredClients || 0;
+          if (!c) return;
+          w += c;
+          s += (k.productsPerClient != null ? k.productsPerClient : 1.3) * c;
+        });
+        return w ? +(s / w).toFixed(2) : 0;
+      })(),
       pipe: {
         sent: kms.reduce((s, k) => s + (k.pipe?.sent || 0), 0),
         viewed: kms.reduce((s, k) => s + (k.pipe?.viewed || 0), 0),
@@ -949,7 +1021,7 @@
       `Доступно к УКП: <b>${fmt(f.available)}</b> · ` +
       `Конв. акц./заявка/сделка: <b>${pct(f.convAccept)}</b> / <b>${pct(f.convApp)}</b> / <b>${pct(f.convDeal)}</b>`;
     $("#role-sub").textContent = state.mode === "product"
-      ? "Прототип · руководитель продуктового desk"
+      ? "Прототип · продукты (БП)"
       : state.mode === "division"
         ? "Прототип · дивизиональный руководитель"
         : state.mode === "region"
@@ -1094,11 +1166,48 @@
     }).filter((r) => r.inclined > 0);
   }
 
+  function productAppsRows(kms, periodFrom) {
+    const weeks = periodWeeks(periodFrom);
+    const clientsTot = sum(kms, "clients") || 1;
+    const potTot = sum(kms, "potential") || 1;
+    const clientShare = clientsTot / potTot;
+    const cumFactor = weeks === 1 ? 1 : 1 + (weeks - 1) * 0.42;
+    return PRODUCTS.map((p) => {
+      let inclined = 0;
+      let discussed = 0;
+      let slots = 0;
+      kms.forEach((k) => {
+        const pr = k.products && k.products[p.code];
+        if (!pr) return;
+        const incl = Math.min(k.clients || 0, Math.round((pr.potential || 0) * clientShare));
+        const appsWeek = Math.min(incl, Math.max(0, (pr.apps || pr.appsP1 || 0) + Math.round((pr.deltaUkp || 0) * 0.4)));
+        const disc = Math.min(incl, Math.round(appsWeek * cumFactor));
+        inclined += incl;
+        discussed += disc;
+        slots += pr.active || 0;
+      });
+      const share = inclined ? discussed / inclined : 0;
+      const seed = hash("divprodapps|" + p.code + "|w" + weeks + "|" + kms.length + "|" + discussed);
+      const rng = RNG(seed);
+      const wowPp = +((rng.f() * 2.8 - 1.2).toFixed(1));
+      return {
+        code: p.code,
+        name: p.name,
+        inclined,
+        discussed,
+        slots,
+        share,
+        wowPp,
+        sharePrev: Math.max(0, Math.min(1, share - wowPp / 100))
+      };
+    }).filter((r) => r.inclined > 0);
+  }
+
   const HELP_CONTENT = {
     cov: {
       title: "Методика: охват и активация клиентов",
       html: `
-        <p>Три KPI-карточки рядом с динамикой охвата.</p>
+        <p>Три KPI-карточки рядом с динамикой охвата. «Охват от активированных» и «Доля активированных» — с красной рамкой Alfa-boss.</p>
         <span class="formula">Охват от клиентов = с (чат ∨ УКП) / клиенты банка</span>
         <span class="formula">Охват от активированных = активированные с (чат ∨ УКП) / активированные</span>
         <span class="formula">Доля активированных = активированные / клиенты банка</span>
@@ -1111,49 +1220,29 @@
         </ul>`
     },
     prod: {
-      title: "Методика: продуктовое покрытие и продукты на клиента",
+      title: "Методика: продуктовое покрытие",
       html: `
-        <p><b>Покрытие продукта</b> — доля клиентов со склонностью, у которых продукт обсуждался в коммуникациях.</p>
-        <span class="formula">Покрытие продукта = обсуждали продукт / клиенты со склонностью к продукту</span>
+        <p>Переключатель: покрытие продукта <b>в коммуникациях</b> или <b>в заявках</b>.</p>
+        <span class="formula">Покрытие в комм. = обсуждали продукт / клиенты со склонностью</span>
+        <span class="formula">Покрытие в заявках = заявки по продукту / клиенты со склонностью</span>
+        <p>Справа три KPI:</p>
         <ul>
-          <li><b>Обсуждали</b> — продукт упомянут в чате (тег LLM) или включён в УКП за выбранный период.</li>
-          <li><b>Склонность</b> — клиенты банка с продуктовой склонностью в витрине.</li>
-          <li>Для продукта: доля, прирост в п.п., место дивизиона среди сети (клик — полный рейтинг).</li>
-        </ul>
-        <p><b>Продуктов на клиента с коммуникацией</b> — среднее число продуктов в коммуникациях на одного клиента с коммуникацией:</p>
-        <span class="formula">Продуктов / клиент = Σ (продуктовых упоминаний) / клиенты с коммуникацией</span>`
+          <li><b>Конверсия заявок в сделки</b> = сделки / заявки.</li>
+          <li><b>Продуктов на клиента в активностях</b> = среднее число продуктов в активностях на клиента с коммуникацией.</li>
+          <li><b>Конверсия коммуникаций → сделки в цифре</b> = цифровые сделки / клиенты с коммуникацией.</li>
+        </ul>`
     },
     mgr: {
       title: "Методика: рейтинг клиентских менеджеров",
       html: `
-        <p>Рейтинг КМ выбранного региона/управления. Сортировка — клик по заголовку колонки.</p>
+        <p>Рейтинг КМ выбранного региона/управления. Сортировка — клик по заголовку. По умолчанию — сводная оценка.</p>
         <ul>
-          <li><b>Охват от клиентов</b> — клиенты с (чат ∨ действующее УКП) / все клиенты банка на закреплении КМ (без проспектов).</li>
-          <li><b>Охват от активированных</b> — активированные клиенты с коммуникацией / все активированные (хотя бы раз входили в Alfa-boss).</li>
-          <li><b>Доля активированных</b> — активированные клиенты / все клиенты банка КМ. Показывает проникновение Alfa-boss в базу.</li>
-          <li><b>Прод. / кл.</b> — среднее число продуктов в коммуникациях на одного клиента с коммуникацией.</li>
-          <li><b>Конв. заявки→сделки</b> — сделки / все заявки КМ за период (цифровые + оффлайн), по дате заявки.</li>
-          <li><b>Топ-5 продуктов</b> — пилюли с продуктами наибольшего объёма в коммуникациях КМ; пилюля «⋯» открывает полный список, ранжированный по доле покрытия склонности (как в рейтинге команд/отделов).</li>
-          <li><b>Сводная оценка (0–100)</b> — взвешенный перцентильный ранг среди КМ региона:
-            <ul>
-              <li>20% — охват от клиентов</li>
-              <li>15% — охват от активированных</li>
-              <li>20% — доля активированных</li>
-              <li>20% — продуктов на клиента</li>
-              <li>25% — конверсия заявок → сделки</li>
-              <li>штраф −15 п. к шкале 0–1, если много УКП при конв. в акцепт &lt; 12%</li>
-            </ul>
-          </li>
-          <li><b>На что обратить внимание</b> — автоматические сигналы для руководителя:
-            <ul>
-              <li>низкий охват коммуникациями (от клиентов или от активированных) относительно медианы региона;</li>
-              <li>низкая доля активированных в базе;</li>
-              <li>низкая конверсия заявок → сделки;</li>
-              <li>много направленных УКП без акцептов;</li>
-              <li>резкое снижение охвата или конверсии за неделю;</li>
-              <li>узкое продуктовое предложение; отсутствие УКП при крупной базе.</li>
-            </ul>
-          </li>
+          <li><b>Охват коммуникациями</b> — клиенты с коммуникацией / клиенты банка.</li>
+          <li><b>Конв. комм. → сделки в цифре</b> — цифровые сделки / клиенты с коммуникацией.</li>
+          <li><b>Прод. проникновение</b> — среднее число продуктов в коммуникациях на клиента с коммуникацией.</li>
+          <li><b>Топ-5 продуктов</b> — пилюли с наибольшим объёмом в коммуникациях КМ.</li>
+          <li><b>Сводная оценка (0–100)</b> — среднее перцентильных рангов по трём метрикам (равные веса).</li>
+          <li><b>На что обратить внимание</b> — сигналы относительно медианы региона по новым рейтингам (низкий охват, слабая цифровая конверсия, узкое проникновение, негативная динамика).</li>
         </ul>`
     },
     rank: {
@@ -1421,65 +1510,53 @@
 
   function kmManagerRow(k) {
     const clients = k.clients || 0;
-    const activated = k.activatedAb || 0;
     const covered = coveredClientsOf(k, null);
-    const covRate = clients ? covered / clients : 0;
-    const actShare = clients ? activated / clients : 0;
-    const coverOnAct = Math.min(0.95, 0.72 + actShare * 0.2);
-    const coveredAct = Math.min(activated, Math.round(covered * coverOnAct));
-    const covActRate = activated ? coveredAct / activated : 0;
-    const ppc = k.productsPerClient != null ? k.productsPerClient : 1.3;
-    const apps = k.apps || 0;
-    const deals = k.deals || 0;
-    const convApps = apps ? deals / apps : 0;
-    const sent = k.sentTotal || 0;
-    const accept = k.convAccept != null ? k.convAccept : 0;
+    const commCov = clients ? covered / clients : (k.commCoverage || 0);
+    const dealsDigital = k.dealsDigital != null ? k.dealsDigital : Math.round((k.deals || 0) * 0.6);
+    const convCommDig = covered ? dealsDigital / covered : (k.convCommDigital || 0);
+    const prodPen = k.productsPerClient != null ? k.productsPerClient : 1.3;
     const rng = RNG(hash("mgrwow|" + k.id));
-    const covWow = +((rng.f() * 4 - 1.8).toFixed(1));
-    const covActWow = +((rng.f() * 4.5 - 2.0).toFixed(1));
-    const actWow = +((rng.f() * 3.5 - 1.2).toFixed(1));
-    const convWow = +((rng.f() * 6 - 2.5).toFixed(1));
+    const commWow = +((rng.f() * 4 - 1.8).toFixed(1));
+    const convDigWow = +((rng.f() * 6 - 2.5).toFixed(1));
+    const prodWow = +((rng.f() * 0.3 - 0.12).toFixed(2));
     return {
       id: k.id,
       name: k.name,
       team: k.team,
-      clients, activated, covered, coveredAct,
-      covRate, covActRate, actShare, ppc, apps, deals, convApps,
-      sent, accept, deltaUkp: k.deltaUkp || 0,
-      covWow, covActWow, actWow, convWow,
-      spam: sent >= 8 && accept < 0.12
+      clients,
+      covered,
+      activated: k.activatedAb || 0,
+      commCov,
+      convCommDig,
+      prodPen,
+      dealsDigital,
+      commWow,
+      convDigWow,
+      prodWow,
+      deltaUkp: k.deltaUkp || 0
     };
   }
 
   function buildKmAlerts(row, medians) {
-    const { medCov, medCovAct, medAct, medConv } = medians;
+    const { medComm, medConvDig, medProd } = medians;
     const alerts = [];
-    if (row.covRate < medCov * 0.7) {
-      alerts.push({ cls: "warn", text: `Низкий охват от клиентов (${pct(row.covRate)})` });
+    if (row.commCov < medComm * 0.7) {
+      alerts.push({ cls: "warn", text: `Низкий охват коммуникациями (${pct(row.commCov)})` });
     }
-    if (row.activated >= 5 && row.covActRate < medCovAct * 0.7) {
-      alerts.push({ cls: "warn", text: `Низкий охват активированных (${pct(row.covActRate)})` });
+    if (row.covered >= 3 && row.convCommDig < medConvDig * 0.65) {
+      alerts.push({ cls: "warn", text: `Слабая конверсия комм. → сделки в цифре (${pct(row.convCommDig)})` });
     }
-    if (row.clients >= 20 && row.actShare < medAct * 0.7) {
-      alerts.push({ cls: "warn", text: `Низкая доля активированных в Alfa-boss (${pct(row.actShare)})` });
+    if (row.prodPen < medProd * 0.75 || (row.prodPen < 1.15 && row.covered >= 3)) {
+      alerts.push({ cls: "warn", text: `Низкое продуктовое проникновение (${row.prodPen.toFixed(2)} прод./кл.)` });
     }
-    if (row.convApps < medConv * 0.65 || (row.apps >= 3 && row.convApps < 0.08)) {
-      alerts.push({ cls: "warn", text: `Низкая конверсия заявок → сделки (${pct(row.convApps)})` });
+    if (row.commWow <= -2) {
+      alerts.push({ cls: "", text: `Снижение охвата коммуникациями (${row.commWow} п.п.)` });
     }
-    if (row.spam) {
-      alerts.push({ cls: "warn", text: `Много УКП без акцептов (${fmt(row.sent)} отпр., конв. ${pct(row.accept)})` });
+    if (row.convDigWow <= -3) {
+      alerts.push({ cls: "", text: `Падение конверсии в цифровые сделки (${row.convDigWow} п.п.)` });
     }
-    if (row.covWow <= -2) {
-      alerts.push({ cls: "", text: `Резкое снижение охвата от клиентов (${row.covWow} п.п.)` });
-    }
-    if (row.covActWow <= -2.5) {
-      alerts.push({ cls: "", text: `Падение охвата активированных (${row.covActWow} п.п.)` });
-    }
-    if (row.convWow <= -3) {
-      alerts.push({ cls: "", text: `Падение конверсии заявок (${row.convWow} п.п.)` });
-    }
-    if (row.ppc < 1.15 && row.covered >= 3) {
-      alerts.push({ cls: "info", text: `Узкое продуктовое предложение (${row.ppc} прод./кл.)` });
+    if (row.prodWow <= -0.15 && row.covered >= 3) {
+      alerts.push({ cls: "info", text: `Сужение продуктового проникновения (${row.prodWow > 0 ? "+" : ""}${row.prodWow})` });
     }
     if (row.deltaUkp === 0 && row.clients >= 40) {
       alerts.push({ cls: "info", text: "Нет направленных УКП за неделю при крупной базе" });
@@ -1490,29 +1567,20 @@
   function renderManagers(kms) {
     ensureLeadSelected();
     const rows = kms.map(kmManagerRow);
-    const covs = rows.map((r) => r.covRate);
-    const covActs = rows.map((r) => r.covActRate);
-    const acts = rows.map((r) => r.actShare);
-    const ppcs = rows.map((r) => r.ppc);
-    const convs = rows.map((r) => r.convApps);
+    const comms = rows.map((r) => r.commCov);
+    const convs = rows.map((r) => r.convCommDig);
+    const prods = rows.map((r) => r.prodPen);
     const medians = {
-      medCov: median(covs),
-      medCovAct: median(covActs),
-      medAct: median(acts),
-      medConv: median(convs)
+      medComm: median(comms),
+      medConvDig: median(convs),
+      medProd: median(prods)
     };
 
     rows.forEach((r) => {
-      const pCov = percentileRank(covs, r.covRate);
-      const pCovAct = percentileRank(covActs, r.covActRate);
-      const pAct = percentileRank(acts, r.actShare);
-      const pPpc = percentileRank(ppcs, r.ppc);
-      const pConv = percentileRank(convs, r.convApps);
-      const spamPen = r.spam ? 0.15 : 0;
-      // 20% охват клиентов + 15% охват акт. + 20% доля акт. + 20% прод/кл + 25% конв.
-      r.score = Math.round(100 * Math.max(0,
-        0.20 * pCov + 0.15 * pCovAct + 0.20 * pAct + 0.20 * pPpc + 0.25 * pConv - spamPen
-      ));
+      const pComm = percentileRank(comms, r.commCov);
+      const pConv = percentileRank(convs, r.convCommDig);
+      const pProd = percentileRank(prods, r.prodPen);
+      r.score = Math.round(100 * ((pComm + pConv + pProd) / 3));
       r.alerts = buildKmAlerts(r, medians);
     });
 
@@ -1527,7 +1595,7 @@
 
     const note = $("#mgr-note");
     if (note) {
-      note.textContent = `КМ в регионе: ${rows.length}. Сводная = охват кл. 20% + охват акт. 15% + доля акт. 20% + прод./кл. 20% + конв. 25% (штраф за слабые УКП). Медианы: охват ${pct(medians.medCov)}, акт. ${pct(medians.medAct)}, конв. ${pct(medians.medConv)}.`;
+      note.textContent = `КМ в регионе: ${rows.length}. Сводная = среднее рангов по охвату комм., конв. комм.→сделки в цифре и прод. проникновению. Медианы: охват ${pct(medians.medComm)}, конв. ${pct(medians.medConvDig)}, прод. ${medians.medProd.toFixed(2)}.`;
     }
 
     function th(key, label, cls) {
@@ -1547,30 +1615,26 @@
       <thead><tr>
         <th class="num">#</th>
         <th>КМ</th>
-        ${th("covRate", "Охват от клиентов", "num")}
-        ${th("covActRate", "Охват от акт.", "num")}
-        ${th("actShare", "Доля акт.", "num")}
-        ${th("ppc", "Прод. / кл.", "num")}
-        ${th("convApps", "Конв. заявки→сделки", "num")}
+        ${th("commCov", "Охват коммуникациями", "num tip")}
+        ${th("convCommDig", "Конв. комм.→сделки в цифре", "num tip")}
+        ${th("prodPen", "Прод. проникновение", "num tip")}
         ${th("score", "Сводная оценка", "num")}
         <th>Топ-5 продуктов</th>
         <th>На что обратить внимание</th>
       </tr></thead>
       <tbody>${sorted.map((r, i) => {
         const km = kmById[r.id];
-        const prods = km
+        const prodsHtml = km
           ? topProductsForRegion("km-" + r.id, [km], null, periodFrom, periodLabel, r.name)
           : "—";
         return `<tr>
           <td class="num">${i + 1}</td>
-          <td><div class="mgr-name">${r.name}</div><div class="mgr-sub">${r.team} · ${fmt(r.clients)} кл. · ${fmt(r.activated)} акт.</div></td>
-          <td class="num tip" data-tip="${fmt(r.covered)} / ${fmt(r.clients)} клиентов · Δ ${r.covWow > 0 ? "+" : ""}${r.covWow} п.п.">${pct(r.covRate)}</td>
-          <td class="num tip" data-tip="${fmt(r.coveredAct)} / ${fmt(r.activated)} активированных · Δ ${r.covActWow > 0 ? "+" : ""}${r.covActWow} п.п.">${pct(r.covActRate)}</td>
-          <td class="num tip" data-tip="${fmt(r.activated)} / ${fmt(r.clients)} · доля активированных в Alfa-boss · Δ ${r.actWow > 0 ? "+" : ""}${r.actWow} п.п.">${pct(r.actShare)}</td>
-          <td class="num">${r.ppc.toFixed(2)}</td>
-          <td class="num tip" data-tip="${fmt(r.deals)} / ${fmt(r.apps)} заявок · Δ ${r.convWow > 0 ? "+" : ""}${r.convWow} п.п.">${pct(r.convApps)}</td>
+          <td><div class="mgr-name">${r.name}</div><div class="mgr-sub">${r.team} · ${fmt(r.clients)} кл. · ${fmt(r.covered)} с комм.</div></td>
+          <td class="num tip" data-tip="${fmt(r.covered)} / ${fmt(r.clients)} · Δ ${r.commWow > 0 ? "+" : ""}${r.commWow} п.п.">${pct(r.commCov)}</td>
+          <td class="num tip" data-tip="${fmt(r.dealsDigital)} цифровых сделок / ${fmt(r.covered)} с комм. · Δ ${r.convDigWow > 0 ? "+" : ""}${r.convDigWow} п.п.">${pct(r.convCommDig)}</td>
+          <td class="num tip" data-tip="Продуктов на клиента в коммуникациях · Δ ${r.prodWow > 0 ? "+" : ""}${r.prodWow}">${r.prodPen.toFixed(2)}</td>
           <td class="num"><span class="mgr-score">${r.score}</span></td>
-          <td>${prods}</td>
+          <td>${prodsHtml}</td>
           <td><div class="mgr-alerts">${r.alerts.length
             ? r.alerts.map((a) => `<div class="mgr-alert ${a.cls}">${a.text}</div>`).join("")
             : `<div class="mgr-alert ok-empty">Без критичных сигналов</div>`
@@ -1788,11 +1852,22 @@
     });
 
     // ——— Block 2: product comb ———
-    let prodRows = productCommRows(sliceKms, periodFrom).sort((a, b) => b.share - a.share);
+    const prodView = state.divProdView === "apps" ? "apps" : "comm";
+    $all("[data-div-prod-view]").forEach((b) => {
+      b.classList.toggle("active", b.dataset.divProdView === prodView);
+    });
+    const prodTitle = $("#div-prod-title");
+    if (prodTitle) {
+      prodTitle.textContent = prodView === "apps"
+        ? "Продуктовое покрытие в заявках"
+        : "Продуктовое покрытие в коммуникациях";
+    }
+    const rowsFn = prodView === "apps" ? productAppsRows : productCommRows;
+    let prodRows = rowsFn(sliceKms, periodFrom).sort((a, b) => b.share - a.share || b.discussed - a.discussed);
     if (productCode) prodRows = prodRows.filter((r) => r.code === productCode);
     const prodByPeer = {};
     peerUnits.forEach((u) => {
-      prodByPeer[u.key] = productCommRows(u.list, periodFrom);
+      prodByPeer[u.key] = rowsFn(u.list, periodFrom);
     });
     const withRank = prodRows.map((row) => {
       const items = peerUnits.map((u) => {
@@ -1820,9 +1895,10 @@
     });
     const showN = productCode || state.divProdShowAll ? withRank.length : Math.min(5, withRank.length);
     const shown = withRank.slice(0, showN);
+    const coverNoun = prodView === "apps" ? "в заявках" : "склонности";
     $("#div-prod-comb").innerHTML = shown.map((r) => {
       const w = Math.max(0, Math.min(100, Math.round(r.share * 100)));
-      return `<div class="comb-row tip" data-tip="${r.name}: ${pct(r.share)} склонности · ${fmt(r.discussed)} / ${fmt(r.inclined)} · ${r.peerPos}-е среди ${peerWord}">
+      return `<div class="comb-row tip" data-tip="${r.name}: ${pct(r.share)} ${coverNoun} · ${fmt(r.discussed)} / ${fmt(r.inclined)} · ${r.peerPos}-е среди ${peerWord}">
         <div class="comb-name"><button type="button" class="comb-name-btn" data-prod-dyn="${r.code}" title="Динамика заявок и конверсии">${r.name}</button></div>
         <div class="comb-bar-wrap"><div class="comb-bar" style="width:${w}%"></div></div>
         <div class="comb-meta">
@@ -1837,6 +1913,20 @@
       moreBtn.hidden = !!productCode || withRank.length <= 5;
     }
 
+    function unitAppsDealsConv(list) {
+      let apps = 0, deals = 0;
+      list.forEach((k) => {
+        if (productCode && k.products && k.products[productCode]) {
+          const pr = k.products[productCode];
+          apps += pr.apps || pr.appsP1 || 0;
+          deals += pr.deals || 0;
+        } else if (!productCode) {
+          apps += k.apps || 0;
+          deals += k.deals || 0;
+        }
+      });
+      return { apps, deals, rate: apps ? deals / apps : 0 };
+    }
     function avgProductsPerComm(list) {
       let w = 0, s = 0;
       list.forEach((k) => {
@@ -1848,7 +1938,52 @@
       });
       return w ? +(s / w).toFixed(2) : 0;
     }
+    function unitCommDigConv(list) {
+      let covered = 0, dig = 0;
+      list.forEach((k) => {
+        const c = coveredClientsOf(k, productCode);
+        covered += c;
+        const digK = k.dealsDigital != null ? k.dealsDigital : Math.round((k.deals || 0) * 0.6);
+        dig += productCode ? Math.round(digK * Math.min(1, c / Math.max(1, k.chat || k.weekCoveredClients || 1))) : digK;
+      });
+      return { covered, dig, rate: covered ? dig / covered : 0 };
+    }
+
+    const convApps = unitAppsDealsConv(sliceKms);
     const prodPer = avgProductsPerComm(sliceKms);
+    const convDig = unitCommDigConv(sliceKms);
+
+    function peerMetricItems(fn, seedKey) {
+      return peerUnits.map((u) => {
+        const m = fn(u.list);
+        const seed = RNG(hash(seedKey + "|" + u.key + "|" + (productCode || "ALL") + "|p" + periodFrom));
+        const wow = +((seed.f() * 4 - 1.5).toFixed(1));
+        return { key: u.key, label: u.label, rate: m.rate, ratePrev: Math.max(0, m.rate - wow / 100), meta: m };
+      });
+    }
+
+    const convAppsItems = peerMetricItems(unitAppsDealsConv, "divconvapps");
+    const mineConvApps = convAppsItems.find((x) => x.key === myPeerKey);
+    if (mineConvApps) {
+      mineConvApps.rate = convApps.rate;
+      const seed = RNG(hash("divconvapps|" + myPeerKey + "|p" + periodFrom));
+      const wow = +((seed.f() * 4 - 1.5).toFixed(1));
+      mineConvApps.ratePrev = Math.max(0, convApps.rate - wow / 100);
+      mineConvApps.meta = convApps;
+    }
+    const rankedConvApps = rankUnits(convAppsItems, "rate", "ratePrev");
+    const myConvAppsRank = rankedConvApps.find((r) => r.key === myPeerKey) || { pos: "—", move: 0 };
+    cacheRank(
+      "div-conv-apps",
+      `Рейтинг ${peerWordGen} · конверсия заявок → сделки · ${periodLabel}`,
+      myPeerKey,
+      rankedConvApps.map((r) => {
+        const u = peerUnits.find((x) => x.key === r.key);
+        return { ...r, label: (u && u.label) || r.label || r.key };
+      }),
+      (r) => pct(r.rate)
+    );
+
     const rngPpc = RNG(hash("divppc|" + myPeerKey + "|" + (productCode || "ALL") + "|p" + periodFrom));
     const ppcWow = +((rngPpc.f() * 0.25 - 0.1).toFixed(2));
     const ppcPrev = Math.max(productCode ? 0.8 : 1, prodPer - ppcWow);
@@ -1856,19 +1991,15 @@
       const val = avgProductsPerComm(u.list);
       const seed = RNG(hash("divppc2|" + u.key + "|" + (productCode || "ALL") + "|p" + periodFrom));
       const wow = +((seed.f() * 0.25 - 0.1).toFixed(2));
-      return { key: u.key, label: u.label, val, prev: Math.max(productCode ? 0.8 : 1, val - wow) };
+      return { key: u.key, label: u.label, rate: val, ratePrev: Math.max(productCode ? 0.8 : 1, val - wow) };
     });
     const minePpc = ppcItems.find((x) => x.key === myPeerKey);
-    if (minePpc) { minePpc.val = prodPer; minePpc.prev = ppcPrev; }
-    const rankedPpc = rankUnits(
-      ppcItems.map((x) => ({ key: x.key, rate: x.val, ratePrev: x.prev })),
-      "rate",
-      "ratePrev"
-    );
+    if (minePpc) { minePpc.rate = prodPer; minePpc.ratePrev = ppcPrev; }
+    const rankedPpc = rankUnits(ppcItems, "rate", "ratePrev");
     const myPpcRank = rankedPpc.find((r) => r.key === myPeerKey) || { pos: "—", move: 0 };
     cacheRank(
       "div-ppc",
-      `Рейтинг ${peerWordGen} · продуктов на клиента · ${periodLabel}`,
+      `Рейтинг ${peerWordGen} · продуктов на клиента в активностях · ${periodLabel}`,
       myPeerKey,
       rankedPpc.map((r) => {
         const u = peerUnits.find((x) => x.key === r.key);
@@ -1877,28 +2008,68 @@
       (r) => String(r.rate)
     );
 
-    if (productCode && withRank[0]) {
-      const row = withRank[0];
-      $("#div-prod-kpi").innerHTML = divKpiCard({
-        tip: TIPS.divProdPerClient,
-        label: "Покрытие продукта",
-        valueHtml: pct(row.share),
-        deltaHtmlStr: deltaHtml(row.wowPp, " п.п."),
-        rank: row.peerPos,
-        move: row.peerMove,
-        rankKey: row.rankKey,
-        hint: `${fmt(row.discussed)} / ${fmt(row.inclined)} · ${productName(productCode)} · ${periodLabel}`
+    const convDigItems = peerMetricItems(unitCommDigConv, "divconvdig");
+    const mineConvDig = convDigItems.find((x) => x.key === myPeerKey);
+    if (mineConvDig) {
+      mineConvDig.rate = convDig.rate;
+      const seed = RNG(hash("divconvdig|" + myPeerKey + "|p" + periodFrom));
+      const wow = +((seed.f() * 4 - 1.5).toFixed(1));
+      mineConvDig.ratePrev = Math.max(0, convDig.rate - wow / 100);
+      mineConvDig.meta = convDig;
+    }
+    const rankedConvDig = rankUnits(convDigItems, "rate", "ratePrev");
+    const myConvDigRank = rankedConvDig.find((r) => r.key === myPeerKey) || { pos: "—", move: 0 };
+    cacheRank(
+      "div-conv-dig",
+      `Рейтинг ${peerWordGen} · конверсия комм. → сделки в цифре · ${periodLabel}`,
+      myPeerKey,
+      rankedConvDig.map((r) => {
+        const u = peerUnits.find((x) => x.key === r.key);
+        return { ...r, label: (u && u.label) || r.label || r.key };
+      }),
+      (r) => pct(r.rate)
+    );
+
+    const convAppsWow = +(((convApps.rate - (mineConvApps ? mineConvApps.ratePrev : convApps.rate)) * 100).toFixed(1));
+    const convDigWow = +(((convDig.rate - (mineConvDig ? mineConvDig.ratePrev : convDig.rate)) * 100).toFixed(1));
+
+    const elConv = $("#div-prod-kpi-conv");
+    const elPpc = $("#div-prod-kpi-ppc");
+    const elCommConv = $("#div-prod-kpi-commconv");
+    if (elConv) {
+      elConv.innerHTML = divKpiCard({
+        tip: TIPS.convAppsDeals,
+        label: "Конверсия заявок в сделки",
+        valueHtml: pct(convApps.rate),
+        deltaHtmlStr: deltaHtml(convAppsWow, " п.п."),
+        rank: myConvAppsRank.pos,
+        move: myConvAppsRank.move,
+        rankKey: "div-conv-apps",
+        hint: `${fmt(convApps.deals)} / ${fmt(convApps.apps)} · ${periodLabel}`
       });
-    } else {
-      $("#div-prod-kpi").innerHTML = divKpiCard({
-        tip: TIPS.divProdPerClient,
-        label: "Продуктов на клиента с комм.",
+    }
+    if (elPpc) {
+      elPpc.innerHTML = divKpiCard({
+        tip: TIPS.prodPerActivity,
+        label: "Продуктов на клиента в активностях",
         valueHtml: String(prodPer),
         deltaHtmlStr: deltaHtml(ppcWow, ""),
         rank: myPpcRank.pos,
         move: myPpcRank.move,
         rankKey: "div-ppc",
         hint: `на ${fmt(cov.covered)} клиентов с коммуникацией · ${periodLabel}`
+      });
+    }
+    if (elCommConv) {
+      elCommConv.innerHTML = divKpiCard({
+        tip: TIPS.convCommDigital,
+        label: "Конверсия комм. → сделки в цифре",
+        valueHtml: pct(convDig.rate),
+        deltaHtmlStr: deltaHtml(convDigWow, " п.п."),
+        rank: myConvDigRank.pos,
+        move: myConvDigRank.move,
+        rankKey: "div-conv-dig",
+        hint: `${fmt(convDig.dig)} цифр. / ${fmt(convDig.covered)} с комм. · ${periodLabel}`
       });
     }
 
@@ -2032,53 +2203,60 @@
     }).join("") || `<tr><td colspan="7">${emptyMsg}</td></tr>`;
   }
 
-  function renderOverview(kms, f) {
-    const fc = forecastDeals(f);
-    const weekForecast = Math.max(0.1, +(f.deltaUkp * f.convDeal).toFixed(1));
-    const weekFact = f.deltaDeals;
-    const factVsForecastPct = weekForecast > 0 ? +((weekFact / weekForecast) * 100).toFixed(0) : 0;
-    $("#kpi-row").innerHTML = [
-      kpi("Клиентская база", f.potential, "potential", "клиент + проспекты", { deltaPct: f.potentialWowPct }),
-      kpi("С меткой БОСС", f.withAb, "withAb", `доля от клиентской базы ${pct(f.penetration)}`, { deltaPct: f.withAbWowPct }),
-      kpi("Активированные", f.activatedAb, "activatedAb", `из метки · ${pct(f.activationRate)}`, { deltaPct: f.activatedAbWowPct }),
-      kpi("Активные КМ в чатах", f.kmInChat, "kmInChat", `доля от всех КМ ${pct(f.kmInChatShare)}`, { deltaPct: f.kmInChatWowPct }),
-      kpi("Активные клиенты в чатах", f.clientsInChat, "clientsInChat", `ЛПР в чатах ${fmt(f.lprInChat)}`, { deltaPct: f.clientsInChatWowPct }),
-      kpi("Под активным УКП", f.ukpSent, "activeUkp", "заняты TTL", { deltaPct: f.activeUkpWowPct }),
-      kpi("Доступно к УКП", f.available, "available", "ёмкость базы", { deltaPct: f.availableWowPct }),
-      kpi("УКП направлено", f.deltaUkp, "deltaUkp", "недельный flow", { deltaPct: f.deltaUkpWowPct }),
-      kpi("Конв. → акцепт", pct(f.convAccept), "convAcc", `${fmt(f.accepted)} / ${fmt(f.sentTotal)}`, { deltaPp: f.convAcceptWowPct }),
-      kpi("Конв. → заявка", pct(f.convApp), "convApp", `${fmt(f.appsP1)} / ${fmt(f.sentTotal)}`, { deltaPp: f.convAppWowPct }),
-      kpi("Конв. → сделка", pct(f.convDeal), "convDeal", `${fmt(f.dealsFromUkp)} / ${fmt(f.sentTotal)}`, { deltaPp: f.convDealWowPct }),
-      kpi("Прогноз сделок", fc.fromPipe, "forecast", "по клиентам с коммуникацией", { deltaPct: f.forecastWowPct }),
-      kpi("Сделки", f.deals, "deals", "Сделки за период", { deltaAbs: f.deltaDeals, deltaPct: f.dealsWowPct }),
-      kpi("Прогноз vs Факт", `${weekFact} / ${weekForecast}`, "forecastVsFact", "отчетная неделя", { ratioPct: factVsForecastPct })
-    ].join("");
+  function funnelSimpleRow(label, n, tip, max, prevN, lvl) {
+    const conv = prevN ? Math.round((n / prevN) * 100) : 0;
+    const w = Math.max(8, Math.round((n / Math.max(max, 1)) * 100));
+    const lvlClass = lvl ? ` lvl-${lvl}` : "";
+    return `<div class="funnel-row tip${lvlClass}" data-tip="${String(tip).replace(/"/g, "&quot;")}">
+      <div class="funnel-label">${label}</div>
+      <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${w}%"></div></div>
+      <div class="funnel-nums"><strong>${fmt(n)}</strong>${prevN != null ? ` <span class="conv">${conv}%</span>` : ""}</div>
+    </div>`;
+  }
 
-    const stages = [
-      { label: "L1 · Все клиенты и проспекты", n: f.potential, tip: TIPS.potential, lvl: 1 },
-      { label: "L2 · С меткой Alfa-boss", n: f.withAb, tip: TIPS.withAb, lvl: 2 },
-      { label: "Активированные (вход в режим)", n: f.activatedAb, tip: TIPS.activatedAb, lvl: 2 },
-      { label: "Цифровой контакт (чат / УКП)", n: f.chat, tip: TIPS.chat },
-      { label: "Отправлено УКП (учёт)", n: f.sentTotal, tip: TIPS.sentTotal, d: f.deltaUkp },
-      { label: "Просмотрено", n: f.viewed, tip: "ЛПР открыл УКП. Конверсия от отправленных." },
-      { label: "Акцептовано", n: f.accepted, tip: TIPS.convAcc },
-      { label: "Заявки", n: f.apps, tip: TIPS.apps, d: f.deltaApps, note: `P1 ${f.appsP1} · P2 ${f.appsP2} · P3 ${f.appsP3}` },
-      { label: "Сделки", n: f.deals, tip: TIPS.deals, d: f.deltaDeals }
-    ];
-    const max = stages[0].n || 1;
-    $("#funnel").innerHTML = stages.map((s, i) => {
-      const prev = i === 0 ? s.n : stages[i - 1].n;
-      const conv = prev ? Math.round((s.n / prev) * 100) : 0;
-      const w = Math.max(8, Math.round((s.n / max) * 100));
-      const lvlClass = s.lvl ? ` lvl-${s.lvl}` : "";
-      return `<div class="funnel-row tip${lvlClass}" data-tip="${String(s.tip).replace(/"/g, "&quot;")}">
-        <div class="funnel-label">${s.label}</div>
-        <div class="funnel-bar-wrap"><div class="funnel-bar" style="width:${w}%"></div></div>
-        <div class="funnel-nums"><strong>${fmt(s.n)}</strong> ${s.d != null ? deltaHtml(s.d, " за нед.") : ""} ${i ? `<span class="conv">${conv}%</span>` : ""}
-        ${s.note ? `<div class="note">${s.note}</div>` : ""}</div>
+  function funnelCompositeRow(label, tip, parts, max) {
+    const total = parts.reduce((s, p) => s + (p.n || 0), 0);
+    const outerW = Math.max(10, Math.round((total / Math.max(max, 1)) * 100));
+    const tipAll = parts.map((p) => `${p.label}: ${fmt(p.n)}`).join(" · ");
+    const segs = parts.filter((p) => p.n > 0).map((p, i, arr) => {
+      const sw = total ? Math.max(4, Math.round((p.n / total) * 100)) : 0;
+      const solo = arr.length === 1 ? " solo" : "";
+      return `<div class="funnel-seg tip${solo}" style="flex:0 0 ${sw}%;background:${p.color}" data-tip="${String(p.label).replace(/"/g, "&quot;")}: ${fmt(p.n)}">
+        <span class="seg-n">${fmt(p.n)}</span>
       </div>`;
-    }).join("") +
-      `<div class="funnel-foot tip" data-tip="${TIPS.penetration}">Проникновение Alfa-boss: <b>${pct(f.penetration)}</b> (${fmt(f.withAb)} из ${fmt(f.potential)}). Слепая зона без метки: <b>${fmt(f.noAbGap)}</b> ЮЛ — УКП туда недоступны.</div>`;
+    }).join("");
+    return `<div class="funnel-row tip" data-tip="${String(tip + " · " + tipAll).replace(/"/g, "&quot;")}">
+      <div class="funnel-label">${label}</div>
+      <div class="funnel-bar-wrap composite" style="width:${outerW}%;max-width:100%">${segs || `<div class="funnel-seg solo" style="flex:1;background:#d1d5db"><span class="seg-n">0</span></div>`}</div>
+      <div class="funnel-nums"><strong>${fmt(total)}</strong></div>
+    </div>`;
+  }
+
+  function renderOverview(kms, f) {
+    const kpiRow = $("#kpi-row");
+    if (kpiRow) { kpiRow.innerHTML = ""; kpiRow.classList.add("hidden"); }
+
+    const clients = f.clients || Math.max(0, f.potential - (f.prospects || 0));
+    const withComm = f.chat || 0;
+    const consents = Math.min(withComm, f.consents != null ? f.consents : (f.accepted || 0));
+    const appsParts = [
+      { label: "Заявки в мастер-системе после согласия клиентов", n: f.appsMaster || 0, color: "#ef3124" },
+      { label: "Заявки с лендингов", n: f.appsLanding || 0, color: "#f07167" },
+      { label: "Лиды от ТМ", n: f.appsTm || 0, color: "#f59e0b" },
+      { label: "Заявки ДБО", n: f.appsDbo || 0, color: "#3b82f6" }
+    ];
+    const dealParts = [
+      { label: "Цифровые сделки", n: f.dealsDigital || 0, color: "#ef3124" },
+      { label: "Сделки офлайн", n: f.dealsOffline || 0, color: "#6b7280" }
+    ];
+    const max = f.potential || 1;
+    $("#funnel").innerHTML =
+      funnelSimpleRow("1. Все клиенты и проспекты", f.potential, TIPS.potential, max, null, 1) +
+      funnelSimpleRow("2. Все клиенты", clients, TIPS.allClients, max, f.potential, 2) +
+      funnelSimpleRow("3. Клиенты с коммуникациями", withComm, TIPS.withComm, max, clients) +
+      funnelSimpleRow("4. Согласия клиентов", consents, TIPS.consents, max, withComm) +
+      funnelCompositeRow("5. Заявки (состав)", TIPS.appsComposite, appsParts, max) +
+      funnelCompositeRow("6. Сделки (состав)", TIPS.dealsComposite, dealParts, max);
 
     const rankItems = (list, valFn, subFn) => {
       if (!list.length) return "<li>Нет данных</li>";
@@ -2091,27 +2269,37 @@
       return { top, bot };
     };
 
-    const cov = topBottom(kms, "ukpCoverage", (k) => (k.potential || 0) >= 20);
-    const acc = topBottom(kms, "convAccept", (k) => (k.sentTotal || 0) >= 8);
-    const ab = topBottom(kms, "abPenWeek", (k) => (k.potential || 0) >= 20);
-    const prod = topBottom(kms, "productsPerClient", (k) => (k.activeUkp || 0) >= 3);
+    const enriched = kms.map((k) => {
+      const clientsN = k.clients || 0;
+      const covered = k.weekCoveredClients != null ? k.weekCoveredClients : (k.chat || 0);
+      const dig = k.dealsDigital != null ? k.dealsDigital : Math.round((k.deals || 0) * 0.6);
+      return {
+        ...k,
+        _commCov: k.commCoverage != null ? k.commCoverage : (clientsN ? covered / clientsN : 0),
+        _convDig: k.convCommDigital != null ? k.convCommDigital : (covered ? dig / covered : 0),
+        _prodPen: k.productsPerClient != null ? k.productsPerClient : 0,
+        _covered: covered,
+        _dig: dig
+      };
+    });
 
-    const medCov = median(kms.map((k) => k.ukpCoverage || 0));
-    const medAcc = median(kms.filter((k) => k.sentTotal >= 5).map((k) => k.convAccept));
-    const medAb = median(kms.map((k) => k.abPenWeek || 0));
-    const medProd = median(kms.filter((k) => k.activeUkp >= 3).map((k) => k.productsPerClient || 0));
+    const comm = topBottom(enriched, "_commCov", (k) => (k.clients || 0) >= 15);
+    const convDig = topBottom(enriched, "_convDig", (k) => (k._covered || 0) >= 3);
+    const prodPen = topBottom(enriched, "_prodPen", (k) => (k._covered || 0) >= 3);
+
+    const medComm = median(enriched.map((k) => k._commCov || 0));
+    const medConv = median(enriched.filter((k) => k._covered >= 3).map((k) => k._convDig));
+    const medProd = median(enriched.filter((k) => k._covered >= 3).map((k) => k._prodPen));
 
     $("#bench-note").textContent =
-      `Медианы среза: покрытие УКП ${pct(medCov)} · конв. акцепт ${pct(medAcc)} · проникн. AB ${pct(medAb)} · продуктов/клиент ${medProd != null ? medProd : "—"}`;
+      `Медианы среза: охват комм. ${pct(medComm)} · конв. комм.→сделки в цифре ${pct(medConv)} · прод. проникновение ${medProd != null ? Number(medProd).toFixed(2) : "—"}`;
 
-    $("#rank-cov-top").innerHTML = rankItems(cov.top, (k) => pct(k.ukpCoverage), (k) => `УКП ${k.activeUkp} / база ${k.potential}`);
-    $("#rank-cov-bot").innerHTML = rankItems(cov.bot, (k) => pct(k.ukpCoverage), (k) => `УКП ${k.activeUkp} / база ${k.potential}`);
-    $("#rank-acc-top").innerHTML = rankItems(acc.top, (k) => pct(k.convAccept), (k) => `${k.accepted} / ${k.sentTotal} отпр.`);
-    $("#rank-acc-bot").innerHTML = rankItems(acc.bot, (k) => pct(k.convAccept), (k) => `${k.accepted} / ${k.sentTotal} отпр.`);
-    $("#rank-ab-top").innerHTML = rankItems(ab.top, (k) => pct(k.abPenWeek), (k) => `активных ЛПР ${k.abActiveWeek} · база ${k.potential}`);
-    $("#rank-ab-bot").innerHTML = rankItems(ab.bot, (k) => pct(k.abPenWeek), (k) => `активных ЛПР ${k.abActiveWeek} · база ${k.potential}`);
-    $("#rank-prod-top").innerHTML = rankItems(prod.top, (k) => k.productsPerClient, (k) => `на клиента с активным УКП (${k.activeUkp})`);
-    $("#rank-prod-bot").innerHTML = rankItems(prod.bot, (k) => k.productsPerClient, (k) => `на клиента с активным УКП (${k.activeUkp})`);
+    $("#rank-comm-top").innerHTML = rankItems(comm.top, (k) => pct(k._commCov), (k) => `${fmt(k._covered)} / ${fmt(k.clients)} кл.`);
+    $("#rank-comm-bot").innerHTML = rankItems(comm.bot, (k) => pct(k._commCov), (k) => `${fmt(k._covered)} / ${fmt(k.clients)} кл.`);
+    $("#rank-convdig-top").innerHTML = rankItems(convDig.top, (k) => pct(k._convDig), (k) => `${fmt(k._dig)} цифр. / ${fmt(k._covered)} комм.`);
+    $("#rank-convdig-bot").innerHTML = rankItems(convDig.bot, (k) => pct(k._convDig), (k) => `${fmt(k._dig)} цифр. / ${fmt(k._covered)} комм.`);
+    $("#rank-prodpen-top").innerHTML = rankItems(prodPen.top, (k) => k._prodPen, (k) => `на клиента с комм. (${fmt(k._covered)})`);
+    $("#rank-prodpen-bot").innerHTML = rankItems(prodPen.bot, (k) => k._prodPen, (k) => `на клиента с комм. (${fmt(k._covered)})`);
 
     renderUkpTrendChart("#trend", f, "net");
     renderAppsPathCharts({
@@ -2355,18 +2543,8 @@
     const weekForecast = Math.max(0.1, +(f.deltaUkp * f.convDeal).toFixed(1));
     const weekFact = f.deltaDeals;
     const factVsForecastPct = weekForecast > 0 ? +((weekFact / weekForecast) * 100).toFixed(0) : 0;
-    $("#pdesk-kpis").innerHTML = [
-      kpi("Клиентская база", f.potential, "potential", "клиент + проспекты", { deltaPct: f.potentialWowPct }),
-      kpi("С меткой БОСС", f.withAb, "withAb", `доля от клиентской базы ${pct(f.penetration)}`, { deltaPct: f.withAbWowPct }),
-      kpi("УКП направлено", f.deltaUkp, "deltaUkp", "недельный flow", { deltaPct: f.deltaUkpWowPct }),
-      kpi("Доступно к УКП", f.available, "available", "ёмкость базы", { deltaPct: f.availableWowPct }),
-      kpi("Конв. → акцепт", pct(f.convAccept), "convAcc", `${fmt(f.accepted)} / ${fmt(f.sentTotal)}`, { deltaPp: f.convAcceptWowPct }),
-      kpi("Конв. → заявка", pct(f.convApp), "convApp", `${fmt(f.appsP1)} / ${fmt(f.sentTotal)}`, { deltaPp: f.convAppWowPct }),
-      kpi("Конв. → сделка", pct(f.convDeal), "convDeal", `${fmt(f.dealsFromUkp)} / ${fmt(f.sentTotal)}`, { deltaPp: f.convDealWowPct }),
-      kpi("Сделки", f.deals, "deals", "Сделки за период", { deltaAbs: f.deltaDeals, deltaPct: f.dealsWowPct }),
-      kpi("Прогноз сделок", fc.fromPipe, "forecast", "по клиентам с коммуникацией", { deltaPct: f.forecastWowPct }),
-      kpi("Прогноз vs Факт", `${weekFact} / ${weekForecast}`, "forecastVsFact", "отчетная неделя", { ratioPct: factVsForecastPct })
-    ].join("");
+    const pdeskKpis = $("#pdesk-kpis");
+    if (pdeskKpis) { pdeskKpis.innerHTML = ""; pdeskKpis.classList.add("hidden"); }
 
     const stages = [
       { l: "L1 · Клиентская база", n: f.potential, tip: TIPS.potential },
@@ -2591,6 +2769,12 @@
     $all("[data-div-metric]").forEach((btn) => {
       btn.addEventListener("click", () => {
         state.divRankMetric = btn.dataset.divMetric;
+        render();
+      });
+    });
+    $all("[data-div-prod-view]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.divProdView = btn.dataset.divProdView === "apps" ? "apps" : "comm";
         render();
       });
     });

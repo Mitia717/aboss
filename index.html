@@ -19,7 +19,7 @@
       <div class="header-right">
         <div class="mode-switch" role="group" aria-label="Режим">
           <button type="button" class="mode-btn active" data-mode="network">Сеть (КМ)</button>
-          <button type="button" class="mode-btn" data-mode="product">Продуктовый desk</button>
+          <button type="button" class="mode-btn" data-mode="product">Продукты (БП)</button>
           <button type="button" class="mode-btn" data-mode="division">Дивизион</button>
           <button type="button" class="mode-btn" data-mode="region">Регион</button>
         </div>
@@ -41,7 +41,7 @@
         <div class="ms" id="ms-team" data-key="teams"></div>
       </div>
       <div class="field ms-field" style="min-width:200px">
-        <label class="tip" data-tip="Множественный выбор продуктов УКП. Пусто = все 19 продуктов. В режиме продуктового desk рекомендуется выбрать 1–3 продукта.">Продукт</label>
+        <label class="tip" data-tip="Множественный выбор продуктов УКП. Пусто = все 19 продуктов. В режиме Продукты (БП) рекомендуется выбрать 1–3 продукта.">Продукт</label>
         <div class="ms" id="ms-product" data-key="products"></div>
       </div>
       <div class="filter-actions">
@@ -96,7 +96,7 @@
 
   <main>
     <section class="panel active" id="panel-overview">
-      <div class="kpi-row" id="kpi-row"></div>
+      <div class="kpi-row hidden" id="kpi-row"></div>
       <div class="grid-2">
         <div class="stack-left">
           <div class="card">
@@ -104,7 +104,7 @@
             <div class="trend" id="trend"></div>
           </div>
           <div class="card">
-            <h3 class="tip" data-tip="Воронка с уровнями: L1 — все клиенты и проспекты; L2 — ЮЛ с ЛПР с меткой Alfa-boss (без метки УКП недоступно). Далее — контакт, УКП, заявки, сделки. На заявках возможен приток без УКП (P2/P3).">Воронка: потенциал → Alfa-boss → сделки</h3>
+            <h3 class="tip" data-tip="Воронка сети: база → клиенты → коммуникации → согласия → заявки (состав) → сделки (цифра / офлайн).">Воронка: база → коммуникации → сделки</h3>
             <div id="funnel"></div>
           </div>
           <div class="card">
@@ -125,57 +125,44 @@
           </div>
         </div>
         <div class="card">
-          <h3 class="tip" data-tip="Рейтинг КМ по ключевым показателям отработки. В каждом блоке — топ-3 и боттом-3 в текущем срезе.">Рейтинг КМ</h3>
+          <h3 class="tip" data-tip="Рейтинг КМ по трём ключевым показателям. В каждом блоке — топ-3 и боттом-3 в текущем срезе.">Рейтинг КМ</h3>
           <div id="bench-note"></div>
           <div class="rank-metric">
-            <h4 class="tip" data-tip="Доля клиентской базы КМ, которая сейчас под действующим УКП: активные УКП / клиентская база.">Покрытие УКП клиентской базы</h4>
+            <h4 class="tip" data-tip="Охват коммуникациями = клиенты с коммуникацией (чат / УКП / почта TBD / звонки TBD) / все клиенты банка на закреплении КМ.">Охват коммуникациями</h4>
             <div class="rank-lists">
               <div>
                 <h5>Топ</h5>
-                <ul id="rank-cov-top"></ul>
+                <ul id="rank-comm-top"></ul>
               </div>
               <div>
                 <h5>Боттом</h5>
-                <ul id="rank-cov-bot"></ul>
+                <ul id="rank-comm-bot"></ul>
               </div>
             </div>
           </div>
           <div class="rank-metric">
-            <h4 class="tip" data-tip="Конверсия отправленных УКП → акцепт. Учитываются КМ с достаточным объёмом отправок.">Конверсия УКП → акцепт</h4>
+            <h4 class="tip" data-tip="Конверсия коммуникаций в сделки в цифре = цифровые сделки / клиенты с коммуникацией.">Конверсия коммуникаций → сделки в цифре</h4>
             <div class="rank-lists">
               <div>
                 <h5>Топ</h5>
-                <ul id="rank-acc-top"></ul>
+                <ul id="rank-convdig-top"></ul>
               </div>
               <div>
                 <h5>Боттом</h5>
-                <ul id="rank-acc-bot"></ul>
+                <ul id="rank-convdig-bot"></ul>
               </div>
             </div>
           </div>
           <div class="rank-metric">
-            <h4 class="tip" data-tip="Доля проникновения Alfa-boss: клиенты с активными ЛПР в режиме Alfa-boss за неделю / клиентская база.">Проникновение Alfa-boss</h4>
+            <h4 class="tip" data-tip="Продуктовое проникновение на клиента в коммуникациях = среднее число продуктов, обсуждённых в коммуникациях, на одного клиента с коммуникацией.">Продуктовое проникновение на клиента в комм.</h4>
             <div class="rank-lists">
               <div>
                 <h5>Топ</h5>
-                <ul id="rank-ab-top"></ul>
+                <ul id="rank-prodpen-top"></ul>
               </div>
               <div>
                 <h5>Боттом</h5>
-                <ul id="rank-ab-bot"></ul>
-              </div>
-            </div>
-          </div>
-          <div class="rank-metric">
-            <h4 class="tip" data-tip="Среднее число продуктов в действующих УКП на одного клиента под активным УКП.">Продукты в УКП на клиента</h4>
-            <div class="rank-lists">
-              <div>
-                <h5>Топ</h5>
-                <ul id="rank-prod-top"></ul>
-              </div>
-              <div>
-                <h5>Боттом</h5>
-                <ul id="rank-prod-bot"></ul>
+                <ul id="rank-prodpen-bot"></ul>
               </div>
             </div>
           </div>
@@ -269,7 +256,7 @@
     </section>
 
     <section class="panel" id="panel-pdesk">
-      <div class="kpi-row" id="pdesk-kpis"></div>
+      <div class="kpi-row hidden" id="pdesk-kpis"></div>
       <div class="grid-2">
         <div class="stack-left">
           <div class="card">
@@ -298,7 +285,7 @@
           </div>
         </div>
         <div class="card">
-          <h3 class="tip" data-tip="Как дивизионы отрабатывают выбранный продукт(ы): охват и качество конверсий.">Сигналы для продуктового desk</h3>
+          <h3 class="tip" data-tip="Как дивизионы отрабатывают выбранный продукт(ы): охват и качество конверсий.">Сигналы для Продукты (БП)</h3>
           <div id="pdesk-signals"></div>
           <div id="pdesk-forecast" class="kpi-row" style="margin-top:12px"></div>
         </div>
@@ -329,7 +316,7 @@
     </section>
 
     <section class="panel" id="panel-pqual">
-      <p class="note-line">КМ сети с худшим качеством УКП по выбранному продукту — много отправок, мало акцептов. Фокус продуктового desk на обучение сети / донастройку оффера.</p>
+      <p class="note-line">КМ сети с худшим качеством УКП по выбранному продукту — много отправок, мало акцептов. Фокус режима Продукты (БП) на обучение сети / донастройку оффера.</p>
       <div class="table-wrap" id="pqual-wrap"></div>
     </section>
 
@@ -342,22 +329,32 @@
             <div class="trend cov-trend" id="div-cov-trend"></div>
           </div>
           <div class="card div-kpi-card" id="div-cov-kpi"></div>
-          <div class="card div-kpi-card" id="div-cov-kpi-act"></div>
-          <div class="card div-kpi-card" id="div-cov-kpi-share"></div>
+          <div class="card div-kpi-card ab-marked" id="div-cov-kpi-act"></div>
+          <div class="card div-kpi-card ab-marked" id="div-cov-kpi-share"></div>
         </div>
       </div>
 
       <div class="div-block" data-block="prod">
         <button type="button" class="help-btn" data-help="prod" aria-label="Методика: продуктовое покрытие">?</button>
-        <div class="grid-2">
+        <div class="grid-prod">
           <div class="card">
             <div class="card-head">
-              <h3>Продуктовое покрытие в коммуникациях</h3>
-              <button type="button" class="ghost" id="div-prod-more">Ещё</button>
+              <h3 id="div-prod-title">Продуктовое покрытие в коммуникациях</h3>
+              <div class="div-prod-controls">
+                <div class="seg" role="group" aria-label="Вид продуктового покрытия">
+                  <button type="button" class="seg-btn active" data-div-prod-view="comm">В коммуникациях</button>
+                  <button type="button" class="seg-btn" data-div-prod-view="apps">В заявках</button>
+                </div>
+                <button type="button" class="ghost" id="div-prod-more">Ещё</button>
+              </div>
             </div>
             <div class="comb" id="div-prod-comb"></div>
           </div>
-          <div class="card div-kpi-card" id="div-prod-kpi"></div>
+          <div class="prod-kpi-stack">
+            <div class="card div-kpi-card" id="div-prod-kpi-conv"></div>
+            <div class="card div-kpi-card" id="div-prod-kpi-ppc"></div>
+            <div class="card div-kpi-card" id="div-prod-kpi-commconv"></div>
+          </div>
         </div>
       </div>
 
@@ -427,7 +424,7 @@
   </div>
 
   <footer class="proto-foot">
-    Mock-данные · детерминированы от ID КМ · мультифильтры · конверсии и прогноз · режимы «Сеть», «Продуктовый desk», «Дивизион»
+    Mock-данные · детерминированы от ID КМ · мультифильтры · конверсии и прогноз · режимы «Сеть (КМ)», «Продукты (БП)», «Дивизион», «Регион»
   </footer>
 
   <script src="org-embed.js"></script>
